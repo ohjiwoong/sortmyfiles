@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createLicenseToken } from "../../../lib/license-token";
 
 const SECRET_KEY = process.env.TOSS_SECRET_KEY!;
 
@@ -18,14 +19,16 @@ export async function POST(request: NextRequest) {
   const data = await res.json();
 
   if (res.ok) {
-    // 결제 성공
+    // 결제 성공 → 서명된 라이선스 토큰 발급
+    const licenseToken = createLicenseToken(data.orderId);
+
     return NextResponse.json({
       success: true,
       orderId: data.orderId,
       approvedAt: data.approvedAt,
+      licenseToken,
     });
   } else {
-    // 결제 실패
     return NextResponse.json(
       { success: false, message: data.message ?? "결제 승인 실패" },
       { status: 400 }

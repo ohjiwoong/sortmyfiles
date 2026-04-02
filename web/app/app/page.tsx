@@ -29,7 +29,7 @@ import {
   type Translation,
 } from "../lib/i18n";
 import Link from "next/link";
-import { getCurrentPlanSync, getPlanLimits, type PlanType } from "../lib/plan";
+import { getCurrentPlanSync, getCurrentPlan, getPlanLimits, type PlanType } from "../lib/plan";
 
 type AppState =
   | "idle"
@@ -68,6 +68,8 @@ export default function Home() {
     const saved = getSavedLocale();
     setLocale(saved ?? detectLocale());
     setPlan_(getCurrentPlanSync());
+    // 서버에서 토큰 서명 검증 (위조 방지)
+    getCurrentPlan().then(setPlan_);
 
     const history = loadUndoHistory();
     if (history && history.records.length > 0) {

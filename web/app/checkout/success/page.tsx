@@ -40,9 +40,9 @@ function SuccessContent() {
 
         const data = await res.json();
 
-        if (data.success) {
-          // Pro 활성화: orderId를 라이선스 키로 사용
-          saveLicenseKey(orderId);
+        if (data.success && data.licenseToken) {
+          // Pro 활성화: 서버가 발급한 서명된 토큰 저장
+          saveLicenseKey(data.licenseToken);
           setStatus("success");
         } else {
           setStatus("error");

@@ -1,16 +1,17 @@
 /**
  * 무료/유료 플랜 관리
- * 라이선스 키를 localStorage에 저장하여 Pro 기능 잠금 해제
+ * 서명된 라이선스 토큰을 localStorage에 저장
+ * Pro 확인 시 서버에서 토큰 서명을 검증
  */
 
 export type PlanType = "free" | "pro";
 
 export interface PlanLimits {
-  maxFiles: number;         // 정리 가능 파일 수
-  duplicateDelete: boolean; // 중복 파일 삭제 가능
-  includeSubfolders: boolean; // 하위 폴더 포함
-  undoEnabled: boolean;     // 되돌리기 기능
-  monthlySort: boolean;     // 월별 분류
+  maxFiles: number;
+  duplicateDelete: boolean;
+  includeSubfolders: boolean;
+  undoEnabled: boolean;
+  monthlySort: boolean;
 }
 
 const FREE_LIMITS: PlanLimits = {
@@ -35,9 +36,9 @@ export function getPlanLimits(plan: PlanType): PlanLimits {
   return plan === "pro" ? PRO_LIMITS : FREE_LIMITS;
 }
 
-export function saveLicenseKey(key: string): void {
+export function saveLicenseKey(token: string): void {
   try {
-    localStorage.setItem(LICENSE_STORAGE_KEY, key);
+    localStorage.setItem(LICENSE_STORAGE_KEY, token);
   } catch {}
 }
 
@@ -53,28 +54,27 @@ export function clearLicenseKey(): void {
   localStorage.removeItem(LICENSE_STORAGE_KEY);
 }
 
-// Lemon Squeezy 라이선스 키 검증
-export async function validateLicenseKey(key: string): Promise<boolean> {
+// 서버에서 토큰 서명 검증
+export async function validateLicenseKey(token: string): Promise<boolean> {
   try {
-    const res = await fetch("https://api.lemonsqueezy.com/v1/licenses/validate", {
+    const res = await fetch("/api/license/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ license_key: key }),
+      body: JSON.stringify({ token }),
     });
     const data = await res.json();
     return data.valid === true;
   } catch {
-    // 오프라인이거나 API 오류 시 — 저장된 키가 있으면 신뢰
-    return loadLicenseKey() === key;
+    return false;
   }
 }
 
-// 현재 플랜 확인
+// 서버 검증으로 현재 플랜 확인
 export async function getCurrentPlan(): Promise<PlanType> {
-  const key = loadLicenseKey();
-  if (!key) return "free";
+  const token = loadLicenseKey();
+  if (!token) return "free";
 
-  const valid = await validateLicenseKey(key);
+  const valid = await validateLicenseKey(token);
   if (!valid) {
     clearLicenseKey();
     return "free";
@@ -82,7 +82,7 @@ export async function getCurrentPlan(): Promise<PlanType> {
   return "pro";
 }
 
-// 동기적으로 플랜 확인 (저장된 키 존재 여부만)
+// 동기적 확인 (초기 렌더링용 — 토큰 존재 여부만, 이후 서버 검증으로 확정)
 export function getCurrentPlanSync(): PlanType {
   return loadLicenseKey() ? "pro" : "free";
 }
