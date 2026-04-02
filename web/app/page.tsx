@@ -307,6 +307,9 @@ export default function LandingPage() {
                 <option key={loc} value={loc}>{translations[loc].langName}</option>
               ))}
             </select>
+            <Link href="/pricing" className="text-sm text-gray-600 hover:text-gray-900 font-medium">
+              {locale === "ko" ? "요금제" : "Pricing"}
+            </Link>
             <Link
               href="/app"
               className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"

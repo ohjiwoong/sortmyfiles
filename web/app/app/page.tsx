@@ -28,6 +28,8 @@ import {
   type Locale,
   type Translation,
 } from "../lib/i18n";
+import Link from "next/link";
+import { getCurrentPlanSync, getPlanLimits, type PlanType } from "../lib/plan";
 
 type AppState =
   | "idle"
@@ -55,13 +57,17 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [undoHistory, setUndoHistory] = useState<UndoHistory | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [plan_, setPlan_] = useState<PlanType>("free");
 
   const t = translations[locale];
+  const limits = getPlanLimits(plan_);
+  const isPro = plan_ === "pro";
 
-  // 초기화: 언어 감지 + 되돌리기 기록 불러오기
+  // 초기화: 언어 감지 + 되돌리기 기록 + 플랜 확인
   useEffect(() => {
     const saved = getSavedLocale();
     setLocale(saved ?? detectLocale());
+    setPlan_(getCurrentPlanSync());
 
     const history = loadUndoHistory();
     if (history && history.records.length > 0) {
@@ -106,18 +112,23 @@ export default function Home() {
   const handleExecute = useCallback(async () => {
     if (!dirHandle || plan.length === 0) return;
 
-    setState("executing");
-    setProgress({ done: 0, total: plan.length });
+    // 무료 플랜: 파일 수 제한
+    const effectivePlan = isPro ? plan : plan.slice(0, limits.maxFiles);
 
-    const res = await executePlan(dirHandle, plan, (done, total) => {
+    setState("executing");
+    setProgress({ done: 0, total: effectivePlan.length });
+
+    const res = await executePlan(dirHandle, effectivePlan, (done, total) => {
       setProgress({ done, total });
     });
 
-    setUndoHistory(res.history);
-    saveUndoHistory(res.history);
+    if (limits.undoEnabled) {
+      setUndoHistory(res.history);
+      saveUndoHistory(res.history);
+    }
     setResult({ success: res.success, errors: res.errors });
     setState("done");
-  }, [dirHandle, plan]);
+  }, [dirHandle, plan, isPro, limits]);
 
   const handleUndo = useCallback(async () => {
     if (!dirHandle || !undoHistory) return;
@@ -223,23 +234,27 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col items-center gap-2">
-              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <label className={`flex items-center gap-2 text-sm cursor-pointer ${limits.includeSubfolders ? "text-gray-600" : "text-gray-400"}`}>
                 <input
                   type="checkbox"
                   checked={includeSubfolders}
-                  onChange={() => setIncludeSubfolders((v) => !v)}
+                  onChange={() => limits.includeSubfolders && setIncludeSubfolders((v) => !v)}
+                  disabled={!limits.includeSubfolders}
                   className="rounded"
                 />
                 {t.includeSubfolders}
+                {!limits.includeSubfolders && <ProBadge />}
               </label>
-              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <label className={`flex items-center gap-2 text-sm cursor-pointer ${limits.monthlySort ? "text-gray-600" : "text-gray-400"}`}>
                 <input
                   type="checkbox"
                   checked={useDateFolders}
-                  onChange={handleDateFolderToggle}
+                  onChange={() => limits.monthlySort && handleDateFolderToggle()}
+                  disabled={!limits.monthlySort}
                   className="rounded"
                 />
                 {t.monthlySort}
+                {!limits.monthlySort && <ProBadge />}
               </label>
             </div>
 
@@ -438,14 +453,28 @@ export default function Home() {
                     <FolderTree folder={previewTree} depth={0} defaultOpen={true} t={t} />
                   </div>
                 )}
-                <div className="border-t border-gray-200 p-4 bg-gray-50 flex justify-between items-center">
-                  <span className="text-sm text-gray-500">{t.filesReadyCount(plan.length)}</span>
-                  <button
-                    onClick={handleExecute}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition cursor-pointer"
-                  >
-                    {t.executeBtn}
-                  </button>
+                <div className="border-t border-gray-200 p-4 bg-gray-50 space-y-2">
+                  {!isPro && plan.length > limits.maxFiles && (
+                    <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                      <span className="text-sm text-orange-700">
+                        {locale === "ko"
+                          ? `무료 플랜은 ${limits.maxFiles}개까지 가능합니다. Pro로 업그레이드하세요.`
+                          : `Free plan limited to ${limits.maxFiles} files. Upgrade to Pro.`}
+                      </span>
+                      <Link href="/pricing" className="text-sm bg-blue-600 text-white px-3 py-1 rounded-lg font-medium hover:bg-blue-700 transition">
+                        Pro
+                      </Link>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">{t.filesReadyCount(Math.min(plan.length, limits.maxFiles))}</span>
+                    <button
+                      onClick={handleExecute}
+                      className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition cursor-pointer"
+                    >
+                      {t.executeBtn}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -721,4 +750,12 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+function ProBadge() {
+  return (
+    <Link href="/pricing" className="inline-flex items-center px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold hover:bg-blue-200 transition">
+      PRO
+    </Link>
+  );
 }
