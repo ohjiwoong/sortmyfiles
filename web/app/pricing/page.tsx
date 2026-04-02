@@ -13,7 +13,7 @@ import {
 import { loadLicenseKey, saveLicenseKey, validateLicenseKey, clearLicenseKey } from "../lib/plan";
 
 // TODO: Lemon Squeezy 상품 생성 후 실제 URL로 교체
-const CHECKOUT_URL = "https://tidyfiles.lemonsqueezy.com/buy/TODO";
+const LEMON_CHECKOUT_URL = "https://tidyfiles.lemonsqueezy.com/buy/TODO";
 
 const PRICING: Record<string, Record<string, string>> = {
   ko: {
@@ -193,14 +193,12 @@ export default function PricingPage() {
                 {p.activated}
               </div>
             ) : (
-              <a
-                href={CHECKOUT_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href={locale === "ko" ? "/checkout" : LEMON_CHECKOUT_URL}
                 className="block text-center bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
               >
                 {p.upgrade}
-              </a>
+              </Link>
             )}
           </div>
         </div>
