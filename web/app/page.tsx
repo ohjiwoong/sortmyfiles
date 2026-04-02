@@ -1,24 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import {
-  scanFolder,
-  generatePlan,
-  executePlan,
-  undoPlan,
-  findDuplicates,
-  deleteDuplicates,
-  getStats,
-  generatePreviewTree,
-  saveUndoHistory,
-  loadUndoHistory,
-  clearUndoHistory,
-  type ScannedFile,
-  type PlanItem,
-  type DuplicateGroup,
-  type UndoHistory,
-  type PreviewFolder,
-} from "./lib/organizer";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   translations,
   detectLocale,
@@ -26,699 +9,237 @@ import {
   saveLocale,
   LOCALES,
   type Locale,
-  type Translation,
 } from "./lib/i18n";
 
-type AppState =
-  | "idle"
-  | "scanning"
-  | "scanned"
-  | "preview"
-  | "executing"
-  | "done"
-  | "undoing"
-  | "duplicates";
+const FEATURES = [
+  { icon: "📂", titleKey: "f1Title", descKey: "f1Desc" },
+  { icon: "🔍", titleKey: "f2Title", descKey: "f2Desc" },
+  { icon: "↩️", titleKey: "f3Title", descKey: "f3Desc" },
+  { icon: "⚡", titleKey: "f4Title", descKey: "f4Desc" },
+  { icon: "🔒", titleKey: "f5Title", descKey: "f5Desc" },
+  { icon: "🌍", titleKey: "f6Title", descKey: "f6Desc" },
+] as const;
 
-type ViewMode = "table" | "tree";
+const LANDING: Record<string, Record<string, string>> = {
+  ko: {
+    hero: "지저분한 폴더,\n클릭 한 번으로 정리",
+    heroSub: "다운로드, 바탕화면, 카카오톡 받은 파일 — 설치 없이 브라우저에서 바로 정리하세요.",
+    cta: "무료로 시작하기",
+    howTitle: "어떻게 작동하나요?",
+    step1: "폴더 선택",
+    step1d: "정리할 폴더를 선택하고 브라우저 접근 권한을 허용하세요.",
+    step2: "미리보기 확인",
+    step2d: "파일이 어떻게 분류되는지 실행 전에 미리 확인합니다.",
+    step3: "정리 완료",
+    step3d: "클릭 한 번으로 파일이 카테고리별 폴더로 정리됩니다.",
+    featTitle: "주요 기능",
+    f1Title: "스마트 파일 분류",
+    f1Desc: "12개 카테고리로 자동 분류. 카카오톡, WhatsApp 등 메신저 파일도 자동 감지.",
+    f2Title: "중복 파일 탐지",
+    f2Desc: "동일한 파일을 찾아서 보존할 파일을 선택하고 나머지를 삭제. 용량을 확보하세요.",
+    f3Title: "안전한 되돌리기",
+    f3Desc: "정리 후에도 원래 상태로 복원 가능. 기록은 브라우저에 저장되어 나중에도 복원.",
+    f4Title: "빠른 처리 속도",
+    f4Desc: "move API로 경로만 변경하여 즉시 처리. 5개 파일 병렬 처리로 대량 파일도 빠르게.",
+    f5Title: "완전한 프라이버시",
+    f5Desc: "모든 처리는 브라우저에서 실행. 파일이 서버로 전송되지 않습니다.",
+    f6Title: "10개 언어 지원",
+    f6Desc: "한국어, English, 日本語, 中文, Español, Deutsch, Français, Português 등 지원.",
+    faq: "자주 묻는 질문",
+    q1: "정말 무료인가요?",
+    a1: "네, 기본 파일 분류 기능은 완전히 무료입니다.",
+    q2: "파일이 서버로 전송되나요?",
+    a2: "아닙니다. 모든 처리는 브라우저 안에서만 이루어집니다. 파일이 외부로 나가지 않습니다.",
+    q3: "어떤 브라우저에서 사용할 수 있나요?",
+    a3: "Chrome과 Edge에서 사용 가능합니다. File System Access API를 지원하는 브라우저가 필요합니다.",
+    q4: "파일이 손실될 수 있나요?",
+    a4: "아닙니다. 파일은 복사 완료 후 원본을 삭제하므로 도중에 중단되어도 손실이 없으며, 되돌리기 기능으로 원래 상태로 복원할 수 있습니다.",
+    bottomCta: "지금 바로 시작하세요",
+    bottomSub: "설치도, 회원가입도 필요 없습니다.",
+  },
+  en: {
+    hero: "Messy folders?\nOrganized in one click.",
+    heroSub: "Downloads, Desktop, messenger files — sort them instantly in your browser. No install needed.",
+    cta: "Start for Free",
+    howTitle: "How does it work?",
+    step1: "Select Folder",
+    step1d: "Choose a folder and grant browser access permission.",
+    step2: "Preview Changes",
+    step2d: "See exactly how files will be sorted before executing.",
+    step3: "Done!",
+    step3d: "Files are organized into category folders with one click.",
+    featTitle: "Features",
+    f1Title: "Smart File Sorting",
+    f1Desc: "Auto-sort into 12 categories. Detects KakaoTalk, WhatsApp, LINE, Telegram & more.",
+    f2Title: "Duplicate Detection",
+    f2Desc: "Find identical files, choose which to keep, and delete the rest to free up space.",
+    f3Title: "Safe Undo",
+    f3Desc: "Restore files to their original location anytime. History is saved in your browser.",
+    f4Title: "Lightning Fast",
+    f4Desc: "Uses move API for instant file moves. Processes 5 files in parallel.",
+    f5Title: "Complete Privacy",
+    f5Desc: "Everything runs in your browser. No files are ever uploaded to any server.",
+    f6Title: "10 Languages",
+    f6Desc: "Korean, English, Japanese, Chinese, Spanish, German, French, Portuguese & more.",
+    faq: "FAQ",
+    q1: "Is it really free?",
+    a1: "Yes, the basic file sorting feature is completely free.",
+    q2: "Are my files uploaded to a server?",
+    a2: "No. All processing happens entirely in your browser. Your files never leave your computer.",
+    q3: "Which browsers are supported?",
+    a3: "Chrome and Edge are supported. The File System Access API is required.",
+    q4: "Can I lose my files?",
+    a4: "No. Files are copied before originals are removed. Even if interrupted, nothing is lost. You can also undo to restore everything.",
+    bottomCta: "Get Started Now",
+    bottomSub: "No install, no sign-up required.",
+  },
+};
 
-export default function Home() {
+function getLanding(locale: Locale): Record<string, string> {
+  return LANDING[locale] ?? LANDING["en"];
+}
+
+export default function LandingPage() {
   const [locale, setLocale] = useState<Locale>("en");
-  const [state, setState] = useState<AppState>("idle");
-  const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
-  const [files, setFiles] = useState<ScannedFile[]>([]);
-  const [plan, setPlan] = useState<PlanItem[]>([]);
-  const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([]);
-  const [useDateFolders, setUseDateFolders] = useState(false);
-  const [includeSubfolders, setIncludeSubfolders] = useState(false);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
-  const [result, setResult] = useState<{ success: number; errors: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [undoHistory, setUndoHistory] = useState<UndoHistory | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
 
-  const t = translations[locale];
-
-  // 초기화: 언어 감지 + 되돌리기 기록 불러오기
   useEffect(() => {
     const saved = getSavedLocale();
     setLocale(saved ?? detectLocale());
-
-    const history = loadUndoHistory();
-    if (history && history.records.length > 0) {
-      setUndoHistory(history);
-    }
   }, []);
 
-  const handleLocaleChange = useCallback((newLocale: Locale) => {
+  const handleLocaleChange = (newLocale: Locale) => {
     setLocale(newLocale);
     saveLocale(newLocale);
-  }, []);
+  };
 
-  const handleSelectFolder = useCallback(async () => {
-    try {
-      const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-      setDirHandle(handle);
-      setError(null);
-      setState("scanning");
-
-      const scanned = await scanFolder(handle, includeSubfolders);
-      setFiles(scanned);
-
-      const newPlan = generatePlan(scanned, useDateFolders);
-      setPlan(newPlan);
-      setState("scanned");
-    } catch (e) {
-      if (e instanceof Error && e.name === "AbortError") return;
-      setError(t.footerSupport);
-    }
-  }, [useDateFolders, includeSubfolders, t]);
-
-  const handleDateFolderToggle = useCallback(() => {
-    setUseDateFolders((prev) => {
-      const next = !prev;
-      if (files.length > 0) {
-        setPlan(generatePlan(files, next));
-      }
-      return next;
-    });
-  }, [files]);
-
-  const handleExecute = useCallback(async () => {
-    if (!dirHandle || plan.length === 0) return;
-
-    setState("executing");
-    setProgress({ done: 0, total: plan.length });
-
-    const res = await executePlan(dirHandle, plan, (done, total) => {
-      setProgress({ done, total });
-    });
-
-    setUndoHistory(res.history);
-    saveUndoHistory(res.history);
-    setResult({ success: res.success, errors: res.errors });
-    setState("done");
-  }, [dirHandle, plan]);
-
-  const handleUndo = useCallback(async () => {
-    if (!dirHandle || !undoHistory) return;
-
-    setState("undoing");
-    setProgress({ done: 0, total: undoHistory.records.length });
-
-    const res = await undoPlan(dirHandle, undoHistory, (done, total) => {
-      setProgress({ done, total });
-    });
-
-    setUndoHistory(null);
-    clearUndoHistory();
-    setResult(null);
-    setState("idle");
-
-    if (res.errors > 0) {
-      setError(`Undo: ${res.success} OK, ${res.errors} failed`);
-    }
-  }, [dirHandle, undoHistory]);
-
-  const handleFindDuplicates = useCallback(async () => {
-    if (!dirHandle) return;
-
-    setState("scanning");
-    const scanned = files.length > 0 ? files : await scanFolder(dirHandle, includeSubfolders);
-    if (files.length === 0) setFiles(scanned);
-
-    setProgress({ done: 0, total: 0 });
-    const dupes = await findDuplicates(scanned, (done, total) => {
-      setProgress({ done, total });
-    });
-
-    setDuplicates(dupes);
-    setState("duplicates");
-  }, [dirHandle, files, includeSubfolders]);
-
-  const handleReset = useCallback(() => {
-    setState("idle");
-    setDirHandle(null);
-    setFiles([]);
-    setPlan([]);
-    setDuplicates([]);
-    setResult(null);
-    setError(null);
-    setUndoHistory(null);
-  }, []);
-
-  // 카테고리명 번역
-  const catName = (key: string) => t.cat[key] ?? key;
-
-  const stats = files.length > 0 ? getStats(files) : null;
-  const previewTree = plan.length > 0 ? generatePreviewTree(plan) : null;
+  const t = translations[locale];
+  const l = getLanding(locale);
 
   return (
-    <main className="flex-1 bg-gray-50">
-      {/* 헤더 */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 py-8 text-center relative">
-          <h1
-            className={`text-3xl font-bold text-gray-900 ${state !== "idle" ? "cursor-pointer hover:text-blue-600 transition" : ""}`}
-            onClick={state !== "idle" ? handleReset : undefined}
-          >
-            {t.title}
-          </h1>
-          <p className="mt-2 text-gray-500">{t.subtitle}</p>
-
-          {/* 언어 선택 */}
-          <div className="absolute right-6 top-1/2 -translate-y-1/2">
+    <main className="flex-1 bg-white">
+      {/* Nav */}
+      <nav className="border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <span className="text-lg font-bold text-gray-900">TidyFiles</span>
+          <div className="flex items-center gap-4">
             <select
               value={locale}
               onChange={(e) => handleLocaleChange(e.target.value as Locale)}
               className="text-xs text-gray-500 bg-transparent border border-gray-200 rounded px-2 py-1 cursor-pointer"
             >
               {LOCALES.map((loc) => (
-                <option key={loc} value={loc}>
-                  {translations[loc].langName}
-                </option>
+                <option key={loc} value={loc}>{translations[loc].langName}</option>
               ))}
             </select>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {/* STEP 1: 폴더 선택 */}
-        {state === "idle" && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center space-y-6">
-            <div className="text-6xl">📁</div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">{t.selectFolder}</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                {t.selectFolderDesc}
-                <br />
-                {t.noUpload}
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center gap-2">
-              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={includeSubfolders}
-                  onChange={() => setIncludeSubfolders((v) => !v)}
-                  className="rounded"
-                />
-                {t.includeSubfolders}
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useDateFolders}
-                  onChange={handleDateFolderToggle}
-                  className="rounded"
-                />
-                {t.monthlySort}
-              </label>
-            </div>
-
-            <button
-              onClick={handleSelectFolder}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition cursor-pointer"
+            <Link
+              href="/app"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
             >
-              {t.selectFolderBtn}
-            </button>
-
-            {undoHistory && undoHistory.records.length > 0 && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-sm text-orange-700">
-                <p className="font-medium">{t.previousRecord}</p>
-                <p className="text-xs mt-1 text-orange-500">
-                  {t.previousRecordDesc(undoHistory.folderName, undoHistory.records.length)} ({new Date(undoHistory.timestamp).toLocaleString()})
-                </p>
-                <div className="mt-3 flex gap-2 justify-center">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-                        setDirHandle(handle);
-                        setState("undoing");
-                        setProgress({ done: 0, total: undoHistory.records.length });
-                        const res = await undoPlan(handle, undoHistory, (done, total) => {
-                          setProgress({ done, total });
-                        });
-                        setUndoHistory(null);
-                        clearUndoHistory();
-                        setState("idle");
-                        if (res.errors > 0) {
-                          setError(`Undo: ${res.success} OK, ${res.errors} failed`);
-                        }
-                      } catch (e) {
-                        if (e instanceof Error && e.name === "AbortError") return;
-                        setError(t.footerSupport);
-                      }
-                    }}
-                    className="bg-orange-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-600 transition cursor-pointer"
-                  >
-                    {t.undoBtn}
-                  </button>
-                  <button
-                    onClick={() => { setUndoHistory(null); clearUndoHistory(); }}
-                    className="text-orange-400 hover:text-orange-600 px-4 py-1.5 text-sm cursor-pointer"
-                  >
-                    {t.deleteRecord}
-                  </button>
-                </div>
-              </div>
-            )}
+              {l.cta}
+            </Link>
           </div>
-        )}
-
-        {/* 스캔 중 */}
-        {state === "scanning" && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center space-y-4">
-            <div className="text-4xl animate-spin inline-block">⏳</div>
-            <p className="text-gray-600">
-              {progress.total > 0 ? t.analyzing(progress.done, progress.total) : t.scanning}
-            </p>
-          </div>
-        )}
-
-        {/* STEP 2: 스캔 결과 + 미리보기 */}
-        {(state === "scanned" || state === "preview") && (
-          <>
-            {stats && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {t.scanResult} — {dirHandle?.name}
-                  </h2>
-                  <button
-                    onClick={handleReset}
-                    className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
-                  >
-                    {t.selectOtherFolder}
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{stats.totalFiles}</div>
-                    <div className="text-xs text-gray-500">{t.totalFiles}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{plan.length}</div>
-                    <div className="text-xs text-gray-500">{t.toOrganize}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {Object.keys(stats.byCategory).length}
-                    </div>
-                    <div className="text-xs text-gray-500">{t.categories}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {formatSize(stats.totalSize)}
-                    </div>
-                    <div className="text-xs text-gray-500">{t.totalSize}</div>
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {Object.entries(stats.byCategory)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([cat, count]) => (
-                      <span
-                        key={cat}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700"
-                      >
-                        {catName(cat)} <span className="font-semibold">{count}</span>
-                      </span>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* 옵션 + 뷰 전환 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={useDateFolders}
-                    onChange={handleDateFolderToggle}
-                    className="rounded"
-                  />
-                  {t.monthlySort.split("(")[0].trim()}
-                </label>
-                <button
-                  onClick={handleFindDuplicates}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
-                >
-                  {t.findDuplicates}
-                </button>
-              </div>
-              {plan.length > 0 && (
-                <div className="flex bg-gray-100 rounded-lg p-0.5">
-                  <button
-                    onClick={() => setViewMode("table")}
-                    className={`px-3 py-1 text-sm rounded-md transition cursor-pointer ${
-                      viewMode === "table" ? "bg-white shadow-sm text-gray-900 font-medium" : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {t.viewList}
-                  </button>
-                  <button
-                    onClick={() => setViewMode("tree")}
-                    className={`px-3 py-1 text-sm rounded-md transition cursor-pointer ${
-                      viewMode === "tree" ? "bg-white shadow-sm text-gray-900 font-medium" : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {t.viewTree}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {plan.length > 0 ? (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                {viewMode === "table" && (
-                  <div className="max-h-96 overflow-y-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 sticky top-0">
-                        <tr>
-                          <th className="text-left px-4 py-3 font-medium text-gray-600">{t.fileName}</th>
-                          {includeSubfolders && (
-                            <th className="text-left px-4 py-3 font-medium text-gray-600">{t.currentLocation}</th>
-                          )}
-                          <th className="text-left px-4 py-3 font-medium text-gray-600">{t.classification}</th>
-                          <th className="text-left px-4 py-3 font-medium text-gray-600">{t.targetFolder}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {plan.map((item, i) => (
-                          <tr key={i} className="hover:bg-gray-50">
-                            <td className="px-4 py-2 text-gray-900 truncate max-w-[200px]">{item.file.name}</td>
-                            {includeSubfolders && (
-                              <td className="px-4 py-2 text-gray-400 text-xs">{item.file.relativePath || "/"}</td>
-                            )}
-                            <td className="px-4 py-2">
-                              <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
-                                {catName(item.file.category)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2 text-gray-500">{item.targetFolder}/</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {viewMode === "tree" && previewTree && (
-                  <div className="max-h-96 overflow-y-auto p-4">
-                    <div className="text-sm text-gray-500 mb-3">{t.previewDesc}</div>
-                    <FolderTree folder={previewTree} depth={0} defaultOpen={true} t={t} />
-                  </div>
-                )}
-                <div className="border-t border-gray-200 p-4 bg-gray-50 flex justify-between items-center">
-                  <span className="text-sm text-gray-500">{t.filesReadyCount(plan.length)}</span>
-                  <button
-                    onClick={handleExecute}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition cursor-pointer"
-                  >
-                    {t.executeBtn}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center text-gray-500">
-                {t.alreadyOrganized}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* 실행 중 / 되돌리기 중 */}
-        {(state === "executing" || state === "undoing") && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 space-y-4">
-            <h2 className="text-lg font-semibold text-center text-gray-900">
-              {state === "executing" ? t.organizing : t.undoing}
-            </h2>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className={`h-3 rounded-full transition-all duration-300 ${state === "undoing" ? "bg-orange-500" : "bg-blue-600"}`}
-                style={{ width: progress.total > 0 ? `${(progress.done / progress.total) * 100}%` : "0%" }}
-              />
-            </div>
-            <p className="text-center text-sm text-gray-500">{t.processed(progress.done, progress.total)}</p>
-          </div>
-        )}
-
-        {/* 완료 */}
-        {state === "done" && result && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center space-y-4">
-            <div className="text-6xl">🎉</div>
-            <h2 className="text-xl font-semibold text-gray-900">{t.done}</h2>
-            <p className="text-gray-600">
-              <span className="text-green-600 font-bold">{t.successCount(result.success)}</span>
-              {result.errors > 0 && <span className="text-red-500 ml-2">{t.failCount(result.errors)}</span>}
-            </p>
-            <div className="flex justify-center gap-3">
-              {undoHistory && undoHistory.records.length > 0 && (
-                <button
-                  onClick={handleUndo}
-                  className="bg-orange-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-orange-600 transition cursor-pointer"
-                >
-                  {t.undoBtn}
-                </button>
-              )}
-              <button
-                onClick={handleReset}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition cursor-pointer"
-              >
-                {t.organizeAnother}
-              </button>
-            </div>
-            {undoHistory && undoHistory.records.length > 0 && (
-              <p className="text-xs text-gray-400">{t.undoSaved}</p>
-            )}
-          </div>
-        )}
-
-        {/* 중복 파일 결과 */}
-        {state === "duplicates" && (
-          <DuplicatePanel
-            duplicates={duplicates}
-            dirHandle={dirHandle}
-            onBack={() => setState("scanned")}
-            onReset={handleReset}
-            t={t}
-          />
-        )}
-
-        {/* 하단 안내 */}
-        <div className="text-center text-xs text-gray-400 space-y-1 pb-8">
-          <p>{t.footerBrowser}</p>
-          <p>{t.footerMove}</p>
-          <p>{t.footerSafe}</p>
-          <p>{t.footerUndo}</p>
-          <p>{t.footerSupport}</p>
         </div>
-      </div>
-    </main>
-  );
-}
+      </nav>
 
-// ========== 폴더 트리 미리보기 ==========
-
-function FolderTree({
-  folder,
-  depth,
-  defaultOpen = false,
-  t,
-}: {
-  folder: PreviewFolder;
-  depth: number;
-  defaultOpen?: boolean;
-  t: Translation;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  const indent = depth * 20;
-  const fileCount = countAllFiles(folder);
-
-  return (
-    <div>
-      <div
-        className="flex items-center gap-1.5 py-1.5 cursor-pointer hover:bg-gray-100 rounded px-2 select-none"
-        style={{ paddingLeft: indent }}
-        onClick={() => setOpen(!open)}
-      >
-        <span className={`text-[10px] text-gray-400 transition-transform duration-150 inline-block ${open ? "rotate-90" : ""}`}>
-          ▶
-        </span>
-        <span className="text-sm">{open ? "📂" : "📁"}</span>
-        <span className="font-medium text-gray-800 text-sm">{folder.name}</span>
-        <span className="text-xs text-gray-400 ml-auto">{fileCount}</span>
-      </div>
-      {open && (
-        <div className="border-l border-gray-200" style={{ marginLeft: indent + 12 }}>
-          {folder.subfolders.map((sub) => (
-            <FolderTree key={sub.name} folder={sub} depth={depth + 1} t={t} />
-          ))}
-          {folder.files.map((file) => (
-            <div key={file} className="flex items-center gap-1.5 py-0.5 text-sm text-gray-500 pl-4">
-              <span className="text-xs">📄</span>
-              <span className="truncate">{file}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ========== 중복 파일 패널 ==========
-
-function DuplicatePanel({
-  duplicates,
-  dirHandle,
-  onBack,
-  onReset,
-  t,
-}: {
-  duplicates: DuplicateGroup[];
-  dirHandle: FileSystemDirectoryHandle | null;
-  onBack: () => void;
-  onReset: () => void;
-  t: Translation;
-}) {
-  const [keepIndices, setKeepIndices] = useState<Record<number, number>>(() => {
-    const initial: Record<number, number> = {};
-    duplicates.forEach((_, gi) => { initial[gi] = 0; });
-    return initial;
-  });
-  const [deleting, setDeleting] = useState(false);
-  const [deleteResult, setDeleteResult] = useState<{ success: number; freedBytes: number } | null>(null);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
-
-  const filesToDelete = duplicates.flatMap((group, gi) =>
-    group.files.filter((_, fi) => fi !== keepIndices[gi])
-  );
-  const freedSize = filesToDelete.reduce((sum, f) => sum + f.size, 0);
-
-  const handleDelete = async () => {
-    if (!dirHandle || filesToDelete.length === 0) return;
-    if (!window.confirm(t.confirmDelete(filesToDelete.length, formatSize(freedSize)))) return;
-
-    setDeleting(true);
-    setProgress({ done: 0, total: filesToDelete.length });
-
-    const res = await deleteDuplicates(filesToDelete, (done, total) => {
-      setProgress({ done, total });
-    });
-
-    setDeleting(false);
-    setDeleteResult({ success: res.success, freedBytes: res.freedBytes });
-  };
-
-  if (deleteResult) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center space-y-4">
-        <div className="text-6xl">🗑️</div>
-        <h2 className="text-xl font-semibold text-gray-900">{t.duplicatesDone}</h2>
-        <p className="text-gray-600">
-          <span className="text-green-600 font-bold">{t.deletedCount(deleteResult.success)}</span>,{" "}
-          <span className="text-blue-600 font-bold">{t.freedSpace(formatSize(deleteResult.freedBytes))}</span>
+      {/* Hero */}
+      <section className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight whitespace-pre-line">
+          {l.hero}
+        </h1>
+        <p className="mt-6 text-lg text-gray-500 max-w-2xl mx-auto">
+          {l.heroSub}
         </p>
-        <button onClick={onReset} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition cursor-pointer">
-          {t.backToStart}
-        </button>
-      </div>
-    );
-  }
-
-  if (deleting) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 space-y-4">
-        <h2 className="text-lg font-semibold text-center text-gray-900">{t.deletingDuplicates}</h2>
-        <div className="w-full bg-gray-200 rounded-full h-3">
-          <div
-            className="bg-red-500 h-3 rounded-full transition-all duration-300"
-            style={{ width: progress.total > 0 ? `${(progress.done / progress.total) * 100}%` : "0%" }}
-          />
+        <div className="mt-8">
+          <Link
+            href="/app"
+            className="inline-block bg-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/20"
+          >
+            {l.cta}
+          </Link>
         </div>
-        <p className="text-center text-sm text-gray-500">{progress.done} / {progress.total}</p>
-      </div>
-    );
-  }
+        <p className="mt-4 text-sm text-gray-400">{l.bottomSub}</p>
+      </section>
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-900">{t.duplicateResult}</h2>
-        <button onClick={onBack} className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer">{t.goBack}</button>
-      </div>
-      {duplicates.length === 0 ? (
-        <div className="p-8 text-center text-gray-500">{t.noDuplicates}</div>
-      ) : (
-        <>
-          <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 text-sm text-blue-700">
-            {t.selectToKeep}
-          </div>
-          <div className="max-h-96 overflow-y-auto divide-y divide-gray-200">
-            {duplicates.map((group, gi) => (
-              <div key={gi} className="p-4">
-                <div className="text-xs text-gray-400 mb-2">
-                  {t.group(gi + 1)} — {t.identicalFiles(group.files.length)} ({formatSize(group.files[0].size)})
+      {/* How it works */}
+      <section className="bg-gray-50 py-16">
+        <div className="max-w-4xl mx-auto px-6">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-12">{l.howTitle}</h2>
+          <div className="grid sm:grid-cols-3 gap-8">
+            {[
+              { step: "1", title: l.step1, desc: l.step1d, icon: "📁" },
+              { step: "2", title: l.step2, desc: l.step2d, icon: "👀" },
+              { step: "3", title: l.step3, desc: l.step3d, icon: "✅" },
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div className="text-4xl mb-3">{item.icon}</div>
+                <div className="inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full text-sm font-bold mb-3">
+                  {item.step}
                 </div>
-                {group.files.map((f, fi) => {
-                  const isKept = keepIndices[gi] === fi;
-                  return (
-                    <label
-                      key={fi}
-                      className={`flex items-center gap-3 py-1.5 px-2 rounded cursor-pointer transition ${
-                        isKept ? "bg-green-50 border border-green-200" : "hover:bg-red-50 border border-transparent"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`dup-group-${gi}`}
-                        checked={isKept}
-                        onChange={() => setKeepIndices((prev) => ({ ...prev, [gi]: fi }))}
-                        className="accent-green-600"
-                      />
-                      <span className={`text-sm flex-1 ${isKept ? "text-green-800 font-medium" : "text-gray-500 line-through"}`}>
-                        {f.name}
-                      </span>
-                      <span className="text-xs text-gray-400">{isKept ? t.keep : t.remove}</span>
-                    </label>
-                  );
-                })}
+                <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
+                <p className="text-sm text-gray-500">{item.desc}</p>
               </div>
             ))}
           </div>
-          <div className="border-t border-gray-200 p-4 bg-gray-50 flex justify-between items-center">
-            <span className="text-sm text-gray-500">{t.toDeleteCount(filesToDelete.length, formatSize(freedSize))}</span>
-            <button
-              onClick={handleDelete}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 transition cursor-pointer"
-            >
-              {t.deleteSelected}
-            </button>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-16">
+        <div className="max-w-4xl mx-auto px-6">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-12">{l.featTitle}</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {FEATURES.map((f) => (
+              <div key={f.titleKey} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition">
+                <div className="text-3xl mb-3">{f.icon}</div>
+                <h3 className="font-semibold text-gray-900 mb-2">{l[f.titleKey]}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{l[f.descKey]}</p>
+              </div>
+            ))}
           </div>
-        </>
-      )}
-    </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="bg-gray-50 py-16">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-12">{l.faq}</h2>
+          <div className="space-y-4">
+            {(["1", "2", "3", "4"] as const).map((n) => (
+              <details key={n} className="bg-white border border-gray-200 rounded-xl p-5 group">
+                <summary className="font-medium text-gray-900 cursor-pointer list-none flex justify-between items-center">
+                  {l[`q${n}`]}
+                  <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <p className="mt-3 text-sm text-gray-500 leading-relaxed">{l[`a${n}`]}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="py-20 text-center">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">{l.bottomCta}</h2>
+        <p className="text-gray-500 mb-8">{l.bottomSub}</p>
+        <Link
+          href="/app"
+          className="inline-block bg-blue-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/20"
+        >
+          {l.cta}
+        </Link>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-100 py-8">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+          <span>TidyFiles — {t.footerBrowser}</span>
+          <div className="flex items-center gap-4">
+            <a href="https://github.com/ohjiwoong/tidyfiles" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
+              GitHub
+            </a>
+          </div>
+        </div>
+      </footer>
+    </main>
   );
-}
-
-function countAllFiles(folder: PreviewFolder): number {
-  let count = folder.files.length;
-  for (const sub of folder.subfolders) count += countAllFiles(sub);
-  return count;
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
