@@ -50,7 +50,7 @@ export interface UndoHistory {
 
 // ========== 되돌리기 기록 localStorage 저장 ==========
 
-const UNDO_STORAGE_KEY = "file-cleaner-undo-history";
+const UNDO_STORAGE_KEY = "sortmyfiles-undo-history";
 
 export function saveUndoHistory(history: UndoHistory): void {
   try {

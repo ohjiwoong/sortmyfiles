@@ -30,7 +30,7 @@ const PRO_LIMITS: PlanLimits = {
   monthlySort: true,
 };
 
-const LICENSE_STORAGE_KEY = "tidyfiles-license";
+const LICENSE_STORAGE_KEY = "sortmyfiles-license";
 
 export function getPlanLimits(plan: PlanType): PlanLimits {
   return plan === "pro" ? PRO_LIMITS : FREE_LIMITS;

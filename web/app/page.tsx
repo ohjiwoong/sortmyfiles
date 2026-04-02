@@ -296,7 +296,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="text-lg font-bold text-gray-900">TidyFiles</span>
+          <span className="text-lg font-bold text-gray-900">SortMyFiles</span>
           <div className="flex items-center gap-4">
             <select
               value={locale}
@@ -411,9 +411,9 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-gray-100 py-8">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
-          <span>TidyFiles — {t.footerBrowser}</span>
+          <span>SortMyFiles — {t.footerBrowser}</span>
           <div className="flex items-center gap-4">
-            <a href="https://github.com/ohjiwoong/tidyfiles" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
+            <a href="https://github.com/ohjiwoong/sortmyfiles" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
               GitHub
             </a>
           </div>

@@ -13,7 +13,7 @@ import {
 import { loadLicenseKey, saveLicenseKey, validateLicenseKey, clearLicenseKey } from "../lib/plan";
 
 // TODO: Lemon Squeezy 상품 생성 후 실제 URL로 교체
-const LEMON_CHECKOUT_URL = "https://tidyfiles.lemonsqueezy.com/buy/TODO";
+const LEMON_CHECKOUT_URL = "https://sortmyfiles.lemonsqueezy.com/buy/TODO";
 
 const PRICING: Record<string, Record<string, string>> = {
   ko: {
@@ -121,7 +121,7 @@ export default function PricingPage() {
       {/* Nav */}
       <nav className="border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-gray-900">TidyFiles</Link>
+          <Link href="/" className="text-lg font-bold text-gray-900">SortMyFiles</Link>
           <div className="flex items-center gap-4">
             <select
               value={locale}
@@ -248,8 +248,8 @@ export default function PricingPage() {
       {/* Footer */}
       <footer className="border-t border-gray-100 py-8">
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-xs text-gray-400">
-          <span>TidyFiles</span>
-          <a href="https://github.com/ohjiwoong/tidyfiles" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">GitHub</a>
+          <span>SortMyFiles</span>
+          <a href="https://github.com/ohjiwoong/sortmyfiles" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">GitHub</a>
         </div>
       </footer>
     </main>

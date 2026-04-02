@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/레노버/.claude/projects/**)",
+      "Bash(npx create-next-app@latest web --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(npm run:*)",
+      "WebSearch",
+      "Bash(gh repo:*)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:tidyfiles.vercel.app)",
+      "WebFetch(domain:tidyfiles.app)",
+      "WebFetch(domain:sortmyfiles.com)",
+      "WebFetch(domain:fileswift.app)",
+      "WebFetch(domain:declutter.app)",
+      "WebFetch(domain:foldertidy.com)",
+      "WebFetch(domain:quicksort.app)",
+      "WebFetch(domain:filesweep.com)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\레노버\\.claude\\projects\\c--Users-----source-repos-Cleaner",
+      "c:\\Users\\레노버\\source\\repos\\Cleaner\\web\\.git"
+    ]
+  }
+}

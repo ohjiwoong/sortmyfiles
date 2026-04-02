@@ -37,7 +37,7 @@ export function detectLocale(): Locale {
   return "en"; // 기본값: 영어
 }
 
-const LOCALE_STORAGE_KEY = "file-cleaner-locale";
+const LOCALE_STORAGE_KEY = "sortmyfiles-locale";
 
 export function getSavedLocale(): Locale | null {
   try {

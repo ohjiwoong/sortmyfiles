@@ -7,12 +7,12 @@ import { detectLocale, getSavedLocale } from "../lib/i18n";
 
 const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!;
 const AMOUNT = 4900;
-const ORDER_NAME = "TidyFiles Pro";
+const ORDER_NAME = "SortMyFiles Pro";
 
 export default function CheckoutPage() {
   const [widgets, setWidgets] = useState<TossPaymentsWidgets | null>(null);
   const [ready, setReady] = useState(false);
-  const [orderId] = useState(() => `tidyfiles_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const [orderId] = useState(() => `sortmyfiles_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
 
   const locale = getSavedLocale() ?? detectLocale();
   const isKo = locale === "ko";
@@ -57,7 +57,7 @@ export default function CheckoutPage() {
     <main className="flex-1 bg-gray-50">
       <nav className="bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-gray-900">TidyFiles</Link>
+          <Link href="/" className="text-lg font-bold text-gray-900">SortMyFiles</Link>
           <Link href="/pricing" className="text-sm text-gray-500 hover:text-gray-700">
             {isKo ? "← 요금제로 돌아가기" : "← Back to Pricing"}
           </Link>
@@ -67,7 +67,7 @@ export default function CheckoutPage() {
       <div className="max-w-lg mx-auto px-6 py-12">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h1 className="text-xl font-bold text-gray-900 mb-2">
-            {isKo ? "TidyFiles Pro 결제" : "TidyFiles Pro Checkout"}
+            {isKo ? "SortMyFiles Pro 결제" : "SortMyFiles Pro Checkout"}
           </h1>
           <div className="flex justify-between items-center text-sm text-gray-600">
             <span>{ORDER_NAME}</span>

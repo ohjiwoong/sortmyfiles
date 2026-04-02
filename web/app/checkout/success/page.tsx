@@ -110,7 +110,7 @@ export default function SuccessPage() {
     <main className="flex-1 bg-gray-50">
       <nav className="bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-6 py-4">
-          <Link href="/" className="text-lg font-bold text-gray-900">TidyFiles</Link>
+          <Link href="/" className="text-lg font-bold text-gray-900">SortMyFiles</Link>
         </div>
       </nav>
       <div className="max-w-lg mx-auto px-6 py-20">

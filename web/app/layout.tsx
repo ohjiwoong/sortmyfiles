@@ -12,12 +12,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://tidyfiles-sigma.vercel.app";
+const SITE_URL = "https://sortmyfiles.vercel.app";
 
 export const metadata: Metadata = {
   title: {
-    default: "TidyFiles — Organize messy folders in one click",
-    template: "%s | TidyFiles",
+    default: "SortMyFiles — Organize messy folders in one click",
+    template: "%s | SortMyFiles",
   },
   description:
     "Free browser-based file organizer. Sort your Downloads, Desktop, and messenger files instantly. No install, no upload, complete privacy. Supports 10 languages.",
@@ -43,16 +43,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    title: "TidyFiles — Organize messy folders in one click",
+    title: "SortMyFiles — Organize messy folders in one click",
     description:
       "Free browser-based file organizer. Sort Downloads, Desktop, and messenger files instantly. No install needed.",
-    siteName: "TidyFiles",
+    siteName: "SortMyFiles",
     locale: "en_US",
     alternateLocale: ["ko_KR", "ja_JP", "zh_CN", "es_ES", "de_DE", "fr_FR", "pt_BR", "vi_VN", "th_TH"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "TidyFiles — Organize messy folders in one click",
+    title: "SortMyFiles — Organize messy folders in one click",
     description:
       "Free browser-based file organizer. No install, no upload, complete privacy.",
   },
@@ -89,7 +89,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebApplication",
-              name: "TidyFiles",
+              name: "SortMyFiles",
               url: SITE_URL,
               description:
                 "Free browser-based file organizer. Sort Downloads, Desktop, and messenger files instantly.",
