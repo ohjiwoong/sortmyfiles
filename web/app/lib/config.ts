@@ -21,6 +21,25 @@ export const IGNORE_PATTERNS = [
   ".ds_store",
 ];
 
+// 크롬이 "위험한 파일"로 간주하여 보안 팝업을 띄우는 확장자
+// 이 확장자들은 정리 대상에서 제외하고 별도 안내
+export const BROWSER_BLOCKED_EXTENSIONS = [
+  // 실행 파일
+  ".exe", ".msi", ".bat", ".cmd", ".com", ".scr", ".cpl", ".cab",
+  // 시스템/라이브러리
+  ".dll", ".drv", ".ocx", ".sys",
+  // 스크립트
+  ".js", ".jse", ".vbs", ".vbe", ".wsf", ".wsh", ".ps1",
+  // 설정/데이터 (크롬이 경고)
+  ".xml", ".cfg", ".ini", ".inf", ".reg",
+  // 바로가기/링크
+  ".url", ".website", ".scf", ".lnk",
+  // Java
+  ".class", ".jar", ".jnlp",
+  // 기타
+  ".swf", ".xbap", ".manifest", ".local", ".mof", ".sct", ".shb",
+];
+
 // 확장자 → 카테고리 역방향 맵 (빠른 조회용)
 export const EXT_TO_CATEGORY: Record<string, string> = {};
 for (const [category, extensions] of Object.entries(CATEGORIES)) {

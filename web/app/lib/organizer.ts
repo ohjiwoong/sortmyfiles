@@ -3,7 +3,14 @@
  * File System Access API 기반
  */
 
-import { EXT_TO_CATEGORY, IGNORE_PATTERNS } from "./config";
+import { EXT_TO_CATEGORY, IGNORE_PATTERNS, BROWSER_BLOCKED_EXTENSIONS } from "./config";
+
+export function isBrowserBlocked(filename: string): boolean {
+  const ext = filename.lastIndexOf(".") >= 0
+    ? filename.slice(filename.lastIndexOf(".")).toLowerCase()
+    : "";
+  return BROWSER_BLOCKED_EXTENSIONS.includes(ext);
+}
 
 // ========== 타입 정의 ==========
 
@@ -229,13 +236,24 @@ async function scanFolderRecursive(
 
 // ========== 정리 계획 생성 ==========
 
+export interface PlanResult {
+  plan: PlanItem[];
+  skippedFiles: ScannedFile[]; // 브라우저 보안 팝업 대상 파일
+}
+
 export function generatePlan(
   files: ScannedFile[],
   useDateFolders: boolean = false
-): PlanItem[] {
+): PlanResult {
   const plan: PlanItem[] = [];
+  const skippedFiles: ScannedFile[] = [];
 
   for (const f of files) {
+    // 브라우저 보안 팝업 대상 확장자 → 건너뛰기
+    if (isBrowserBlocked(f.name)) {
+      skippedFiles.push(f);
+      continue;
+    }
     let category = f.category;
 
     // 서브카테고리 적용
@@ -259,7 +277,7 @@ export function generatePlan(
     plan.push({ file: f, targetFolder, reason });
   }
 
-  return plan;
+  return { plan, skippedFiles };
 }
 
 // ========== 정리 실행 ==========
@@ -285,16 +303,23 @@ async function moveFile(
   item: PlanItem,
   targetDir: FileSystemDirectoryHandle
 ): Promise<void> {
+  // move() 우선 시도 — 팝업 없이 즉시 이동
   if (supportsMoveAPI(item.file.handle)) {
-    await item.file.handle.move(targetDir, item.file.name);
-  } else {
-    const originalFile = await item.file.handle.getFile();
-    const newFileHandle = await targetDir.getFileHandle(item.file.name, { create: true });
-    const writable = await newFileHandle.createWritable();
-    await writable.write(await originalFile.arrayBuffer());
-    await writable.close();
-    await item.file.parentHandle.removeEntry(item.file.name);
+    try {
+      await item.file.handle.move(targetDir, item.file.name);
+      return;
+    } catch {
+      // move 실패 시 fallback
+    }
   }
+
+  // fallback: 복사+삭제 (일부 확장자에서 브라우저 보안 팝업이 뜰 수 있음)
+  const originalFile = await item.file.handle.getFile();
+  const newFileHandle = await targetDir.getFileHandle(item.file.name, { create: true });
+  const writable = await newFileHandle.createWritable();
+  await writable.write(await originalFile.arrayBuffer());
+  await writable.close();
+  await item.file.parentHandle.removeEntry(item.file.name);
 }
 
 const CONCURRENCY = 5;
